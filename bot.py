@@ -64,11 +64,11 @@ def main():
         old = previous.get(symbol)
 
         if old is None or value == old:
-            arrow = "➖"
+           arrow = "➖"
         elif value > old:
-            arrow = "🟩 ↑"
+           arrow = "🔺"
         else:
-            arrow = "🟥 ↓"
+           arrow = "🔻"
 
         lines.append(f"{arrow} {title}: {value:,} تومان")
 
