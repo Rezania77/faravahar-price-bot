@@ -3,7 +3,6 @@ import os
 import json
 import requests
 from pathlib import Path
-from html import escape
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 TALASANJ_KEY = os.environ["TALASANJ_KEY"]
@@ -16,8 +15,8 @@ STATE_FILE = Path("previous_prices.json")
 SYMBOLS = {
     "gram18": "طلای ۱۸ عیار (هر گرم)",
     "coin_full": "سکه امامی",
-    "coin_half": "نیم‌سکه",
-    "coin_quarter": "ربع‌سکه",
+    "coin_half": "نیم‌ سکه",
+    "coin_quarter": "ربع‌ سکه",
     "usd": "دلار آزاد",
 }
 
@@ -36,13 +35,13 @@ def send_message(message):
         json={
             "chat_id": CHANNEL_ID,
             "text": message,
-            "parse_mode": "HTML",
             "disable_web_page_preview": True
         },
         timeout=20
     )
     response.raise_for_status()
-    if not response.json().get("ok"):
+    result = response.json()
+    if not result.get("ok"):
         raise RuntimeError("Telegram rejected the message")
 
 def main():
@@ -53,7 +52,7 @@ def main():
     prices = get_prices()
     current = {}
     lines = [
-        "<b>📊 قیمت طلا، سکه و دلار</b>",
+        "📊 قیمت طلا، سکه و دلار",
         ""
     ]
 
@@ -65,26 +64,16 @@ def main():
         old = previous.get(symbol)
 
         if old is None or value == old:
-            arrow = "ـ"
-            color = None
+            arrow = "➖"
         elif value > old:
-            arrow = "↑"
-            color = "#16A34A"
+            arrow = "🟩 ↑"
         else:
-            arrow = "↓"
-            color = "#DC2626"
+            arrow = "🟥 ↓"
 
-        if color:
-            arrow = f'<span style="color:{color}">{arrow}</span>'
-
-        lines.append(
-            f"{arrow} {escape(title)}: {value:,} تومان"
-        )
+        lines.append(f"{arrow} {title}: {value:,} تومان")
 
     lines += [
         "",
-        "⏱ بروزرسانی هر ۱۰ دقیقه",
-        "منبع قیمت‌ها: https://talasanj.info",
         "⚠️ قیمت‌ها تقریبی‌اند و ممکن است با بازار تفاوت داشته باشند.",
         "جهت استعلام دقیق قیمت و مشاوره با شماره 09129572767 تماس بگیرید."
     ]
