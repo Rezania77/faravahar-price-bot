@@ -1,7 +1,9 @@
+
 import os
 import json
 import requests
 from pathlib import Path
+from html import escape
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 TALASANJ_KEY = os.environ["TALASANJ_KEY"]
@@ -14,8 +16,8 @@ STATE_FILE = Path("previous_prices.json")
 SYMBOLS = {
     "gram18": "طلای ۱۸ عیار (هر گرم)",
     "coin_full": "سکه امامی",
-    "coin_half": "نیم‌سکه",
-    "coin_quarter": "ربع‌سکه",
+    "coin_half": "نیم‌ سکه",
+    "coin_quarter": "ربع‌ سکه",
     "usd": "دلار آزاد",
 }
 
@@ -34,13 +36,13 @@ def send_message(message):
         json={
             "chat_id": CHANNEL_ID,
             "text": message,
+            "parse_mode": "HTML",
             "disable_web_page_preview": True
         },
         timeout=20
     )
     response.raise_for_status()
-    result = response.json()
-    if not result.get("ok"):
+    if not response.json().get("ok"):
         raise RuntimeError("Telegram rejected the message")
 
 def main():
@@ -50,7 +52,10 @@ def main():
 
     prices = get_prices()
     current = {}
-    lines = ["📊 قیمت طلا، سکه و دلار", ""]
+    lines = [
+        "<b>📊 قیمت طلا، سکه و دلار</b>",
+        ""
+    ]
 
     for symbol, title in SYMBOLS.items():
         item = prices[symbol]
@@ -60,25 +65,34 @@ def main():
         old = previous.get(symbol)
 
         if old is None or value == old:
-            arrow = "➖"
+            arrow = "ـ"
+            color = None
         elif value > old:
-            arrow = "🔺"
+            arrow = "↑"
+            color = "#16A34A"
         else:
-            arrow = "🔻"
+            arrow = "↓"
+            color = "#DC2626"
 
-        lines.append(f"{arrow} {title}: {value:,} تومان")
+        if color:
+            arrow = f'<span style="color:{color}">{arrow}</span>'
+
+        lines.append(
+            f"{arrow} {escape(title)}: {value:,} تومان"
+        )
 
     lines += [
         "",
-        "⏱ بروزرسانی هر ۱۰ دقیقه",
-        "منبع قیمت‌ها: https://talasanj.info",
-        "⚠️ قیمت‌ها تقریبی‌اند و ممکن است با بازار تفاوت داشته باشند."
+        "⚠️ قیمت‌ها تقریبی‌اند و ممکن است با بازار تفاوت داشته باشند.",
+        "جهت استعلام دقیق قیمت و مشاوره با شماره 09129572767 تماس بگیرید."
     ]
 
     send_message("\n".join(lines))
+
     STATE_FILE.write_text(
         json.dumps(current, ensure_ascii=False, indent=2)
     )
+
     print("Published successfully")
 
 if __name__ == "__main__":
