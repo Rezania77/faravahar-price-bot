@@ -6,10 +6,15 @@ from pathlib import Path
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 TALASANJ_KEY = os.environ["TALASANJ_KEY"]
-CHANNEL_ID = "@FaravaharCoin"
+BALE_BOT_TOKEN = os.environ["BALE_BOT_TOKEN"]
+
+TELEGRAM_CHANNEL = "@FaravaharCoin"
+BALE_CHANNEL = "@faravaharcoin"
 
 API_URL = "https://talasanj.info/api/v1/prices"
 TELEGRAM_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+BALE_URL = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}/sendMessage"
+
 STATE_FILE = Path("previous_prices.json")
 
 SYMBOLS = {
@@ -29,20 +34,23 @@ def get_prices():
     response.raise_for_status()
     return response.json()["prices"]
 
-def send_message(message):
+def send_message(url, channel, message):
     response = requests.post(
-        TELEGRAM_URL,
+        url,
         json={
-            "chat_id": CHANNEL_ID,
+            "chat_id": channel,
             "text": message,
             "disable_web_page_preview": True
         },
         timeout=20
     )
     response.raise_for_status()
+
     result = response.json()
     if not result.get("ok"):
-        raise RuntimeError("Telegram rejected the message")
+        raise RuntimeError(
+            f"Message sending failed: {result.get('description')}"
+        )
 
 def main():
     previous = {}
@@ -51,6 +59,7 @@ def main():
 
     prices = get_prices()
     current = {}
+
     lines = [
         "📊 قیمت طلا، سکه و دلار",
         ""
@@ -64,11 +73,11 @@ def main():
         old = previous.get(symbol)
 
         if old is None or value == old:
-           arrow = "➖"
+            arrow = "➖"
         elif value > old:
-           arrow = "🔺"
+            arrow = "🔺"
         else:
-           arrow = "🔻"
+            arrow = "🔻"
 
         lines.append(f"{arrow} {title}: {value:,} تومان")
 
@@ -78,7 +87,13 @@ def main():
         "جهت استعلام دقیق قیمت و مشاوره با شماره 09129572767 تماس بگیرید."
     ]
 
-    send_message("\n".join(lines))
+    message = "\n".join(lines)
+
+    send_message(TELEGRAM_URL, TELEGRAM_CHANNEL, message)
+    print("Telegram message sent")
+
+    send_message(BALE_URL, BALE_CHANNEL, message)
+    print("Bale message sent")
 
     STATE_FILE.write_text(
         json.dumps(current, ensure_ascii=False, indent=2)
